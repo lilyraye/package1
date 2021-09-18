@@ -1,0 +1,336 @@
+---
+title: "LAB 4 2021"
+author: "Lily Raye"
+date: "9/15/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Task 1
+```{r}
+getwd()
+```
+
+# Task 2
+```{r}
+spruce.df = read.csv("SPRUCE.csv")
+tail(spruce.df)
+```
+# Task 3
+Load the library s20x, make lowess smoother scatter plot using f=0.5
+```{r}
+library(s20x)
+trendspruce = trendscatter(Height~BHDiameter, f=0.5, data=spruce.df)
+```
+Make a linear model object, spruce.lm
+```{r}
+spruce.lm = with(spruce.df,lm(Height~BHDiameter))
+spruce.lm
+```
+Find residuals, put into height.res
+```{r}
+height.res = residuals(spruce.lm)
+height.res
+```
+Find fitted values, put into height.fit
+```{r}
+height.fit = fitted(spruce.lm)
+height.fit
+```
+Plot residuals vs. fitted values
+```{r}
+plot(y=height.res, x=height.fit)
+```
+Plot residuals vs. fitted using trendscatter()
+```{r}
+trendscatter(y=height.res, x=height.fit)
+```
+What shape is in the plot? Compare with trendscatter curve.
+ANS: The plot we just made represents a concave down parabola. This shape (compared to the trendscatter plot from before) appears more symmetrical. After the vertex, the blue and red lines move downwards, but for the trendscatter plot, the slope of both lines is positive and relatively flat. Because the x and y data is different for each plot (trendscatter is Height vs. BHDiameter and this plot is height.res vs. height.fit), a linear model is not appropriate to model the data.
+
+Using plot() function and spruce.lm, make the residual plot
+```{r}
+plot(spruce.lm, which=1)
+```
+Check normality using s20x and normcheck(), show Shapiro-Wilk test
+```{r}
+library(s20x)
+?normcheck
+normcheck(spruce.lm, shapiro.wilk=TRUE)
+```
+What is the p value? What is the null hypothesis?
+ANS: The p value for the Shapiro-Wilk test is 0.29. This p value is greater than 0.05, so we accept the null hypothesis. This tells us the error is normally distributed.
+Therefore, the residuals should have mean 0 as well as constant variance, and they should also be normally distributed within the dataset.
+
+Evaluate the model (equation given in word doc)
+```{r}
+round(mean(height.res), 4)
+```
+The mean is 0 for our residuals. 
+
+Conclusions: Because the mean of the residuals is 0 when we evaluate the model, we should not use a straight line model to represent the data. The plot of residuals vs. fitted heights shows a quadratic shape, not a linear one. We must adjust the model, which is what we will do next in the lab. 
+
+# Task 4
+
+Fit a quadratic to the points, use quad.lm
+```{r}
+quad.lm=lm(Height~BHDiameter + I(BHDiameter^2), data=spruce.df)
+summary(quad.lm)
+```
+
+Make a fresh scatterplot of Height vs. BHDiameter and add quadratic curve to it
+```{r}
+coef(quad.lm)
+plot(Height~BHDiameter,bg="Blue",pch=21,cex=1.2,
+ylim=c(0,max(Height)),xlim=c(0,max(BHDiameter)),
+main="Spruce height prediction",data=spruce.df)
+myplot = function(x) {
+  quad.lm$coef[1] + quad.lm$coef[2] * x + quad.lm$coef[3] * x ^ 2
+}
+
+curve(myplot, lwd=2, col="blue", add=TRUE)
+
+```
+Make quad.fit
+```{r}
+quad.fit = fitted(quad.lm)
+quad.fit
+```
+Make a plot of the residuals vs. fitted values
+```{r}
+plot(quad.lm, which = 1)
+```
+Construct QQ plot using normcheck()
+```{r}
+normcheck(quad.lm, shapiro.wilk = TRUE)
+```
+What is the p value? What do you conclude? 
+The p value of the Shapiro-Wilk test is 0.684. Because it is greater than 0.05, we can accept the null hypothesis. The plot shows us that there isn't a significant trend, and the data only goes from -4 to 4. However, this quadratic model describes the data better than the linear model. 
+
+# Task 5
+Summarize quad.lm
+```{r}
+summary(quad.lm)
+```
+
+What are the beta hat values?
+$$
+\hat\beta_{0}=0.860896
+$$
+$$
+\hat\beta_{1}=1.469562
+$$
+$$
+\hat\beta_{2}=-0.027457
+$$
+Make interval estimates for the beta values
+```{r}
+ciReg(quad.lm) 
+```
+Equation of the fitted line
+$$ 
+\hat{Height} = 0.860896+1.46959x-0.027457x^2
+$$
+Predict height when diameter is 15, 18, 20
+```{r}
+predict(quad.lm, data.frame(BHDiameter=c(15,18,20)))
+```
+Compare with the previous predictions
+```{r}
+predict(spruce.lm, data.frame(BHDiameter=c(15,18,20)))
+```
+The predictions using quad.lm follow a quadratic growth. They are larger than the predictions given by spruce.lm.
+
+What is the value of multiple R squared? Compare with previous model
+```{r}
+summary(quad.lm)$r.squared
+```
+$$
+R^2 = 0.7741266for quad.lm
+$$
+```{r}
+summary(spruce.lm)$r.squared
+```
+$$
+R^2 = 0.6569146 for spruce.lm
+$$
+The R squared value given by spruce.lm is less than the R squared value given by quad.lm.
+
+Use adjusted R squared to compare models
+```{r}
+summary(quad.lm)$adj.r.squared
+```
+```{r}
+summary(spruce.lm)$adj.r.squared
+```
+The adjusted R squared value tells us how well our data fits a model. If we add more variables, the model improves and R squared increases. If we take away variables, the model is less reliable and R squared decreases.
+Based on the adjusted R squared values calculated for spruce.lm (0.6468239) and quad.lm (0.7604373) we can conclude that the quad.lm is "better" because it has a higher R squared value.
+
+What does (multiple R squared) mean in this case?
+ANS: In this case, multiple R squared tells us how well a model describes the data. The number of variables don't matter and neither does the effectiveness of the variables.
+In our example, the multiple R squared describes how well the spruce.lm and quad.lm models fit our data.
+
+Which model explains the most variability in the height?
+```{r}
+summary(quad.lm)$r.squared
+```
+```{r}
+summary(quad.lm)$adj.r.squared
+```
+```{r}
+summary(spruce.lm)$r.squared
+```
+```{r}
+summary(spruce.lm)$adj.r.squared
+```
+Based on these calculations, we can conclude that the quad.lm model explains the most variability in height. Its R squared and adjusted R squared values are both greater than the R squared and adjusted R squared values for the spruce.lm model.
+
+Use anova() and compare the two models
+```{r}
+anova(spruce.lm)
+```
+```{r}
+anova(quad.lm)
+```
+```{r}
+anova(spruce.lm, quad.lm)
+```
+Conclusion: Looking at the results, it appears that quad.lm still models the data better than spruce.lm. Its RSS value is smaller than that of spruce.lm which means it fits the data better overall than spruce.lm.
+
+TSS, MSS, RSS
+```{r}
+height.qfit=fitted(quad.lm)
+```
+
+TSS
+```{r}
+TSS = with(spruce.df, sum((Height-mean(Height))^2))
+TSS
+```
+
+MSS
+```{r}
+MSS = with(spruce.df, sum((height.qfit-mean(Height))^2))
+MSS
+```
+
+RSS
+```{r}
+RSS = with(spruce.df, sum((Height-height.qfit)^2))
+RSS
+```
+
+MSS/TSS
+```{r}
+MSS/TSS
+```
+
+# Task 6
+
+Investigate unusual points by making cooks plot
+```{r}
+cooks20x(quad.lm, main="Cook's Distance Plot for quad.lm")
+```
+What is Cook's distance?
+ANS: Cook's distance tells us by how much a data point would change the regression if it were removed from the dataset. If the Cook's distance is large, this means that there will be a greater impact on the dataset. The distance comes from the impact the actual data has on the fitted values. 
+We use Cook's distance to determine possible outliers or unusual points. It can tell us which data points to take out or ignore if we want to create a new model. If we remove possible outliers, we can get a more accurate trend in our data, and the model will likely improve. This can happen if we increase the R squared value as well.  
+
+Cook's distance for quad.lm
+ANS: For the quad.lm model, Cook's distance tells us that the 24th data point in the dataset is the most influential because it has the greatest distance, or height, shown on the plot.
+
+Make a new object called quad2.lm 
+```{r}
+quad2.lm = lm(Height~BHDiameter+I(BHDiameter^2), data=spruce.df[-24,])
+```
+Summarize quad2.lm
+```{r}
+summary(quad.lm)
+```
+Compare with quad.lm
+```{r}
+summary(quad.lm)
+```
+The minimum and maximum residuals as well as the median for quad2.lm are smaller.
+
+The R squared and adjusted R squared values for quad2.lm are bigger than those of quad.lm.
+
+Conclusions: The Cook's distance plot correctly showed us that the 24th data point impacted the model the most. When we removed that point, the R squared value increased and the model improved. 
+
+# Task 7
+# Proof
+The plot gives us 2 lines that both have a point called $$ x_k $$
+$$l_1 = y-\beta_{0}+\beta_1{x}$$
+$$l_2 = y-\beta_{0}+\delta+(\beta_1+\beta_2){x}$$
+Plug in the point $$ x_k $$ and set the equations equal to each other (because they both include this point)
+$$
+y_k =\beta_{0}+\beta_1x_k = \beta_{0}+\delta+(\beta_1+\beta_2){x_k}  
+$$ 
+$$
+\beta_{0}+\beta_1x_k -\beta_{0}+\delta+\beta_1{x_k}+\beta_2{x_k} 
+$$
+Now $$\beta_{0}$$ and $$\beta_1{x}$$ cancel
+$$
+0 = \delta + \beta_2x_k
+\\
+\delta = -\beta_2x_k
+$$
+Using line 2, substitute $$\delta = -\beta_2x_k $$
+$$
+l_2 : y=\beta_0+\delta+(\beta_1+\beta_2)x
+\\
+l_2 : y= \beta_0-\beta_2x_k+(\beta_1+\beta_2)x 
+$$
+
+Distribute x and rearrange
+$$
+l_2 : y= \beta_0-\beta_2x_k+\beta_1x+\beta_2x
+\\
+l_2 : y= \beta_0+\beta_1x+\beta_2x-beta_2x_k
+$$
+Factor out $$\beta_2$$
+$$
+l_2 : y= \beta_0+\beta_1x+\beta_2(x-x_k)
+$$
+Now the formula describes line 2 as an adjustment to line 1. We can know use I to apply an indicator function.
+$$
+y=\beta_0+\beta_1x+\beta_2(x-x_k)I(x>x_k)
+\\
+where I()=1 \\ if x>x_k \\and 0 everywhere else.
+$$
+Reproduce the plot using the code in the R script
+```{r}
+sp2.df=within(spruce.df, X<-(BHDiameter-18)*(BHDiameter>18))
+sp2.df
+```
+```{r}
+lmp = lm(Height~BHDiameter + X, data=sp2.df)
+tmp = summary(lmp)
+names(tmp)
+```
+```{r}
+myf= function(x, coef){
+  coef[1]+coef[2]*(x)+coef[3]*(x-18)*(x-18>0)
+}
+
+plot(spruce.df, main="Piecewise Regression Plot")
+myf(0, coef=tmp$coefficients[,"Estimate"])
+##Intercept
+
+curve(myf(x,coef=tmp$coefficients[,"Estimate"]), add=TRUE, lwd=2, col="Blue")
+abline(v=18)
+text(18,16,paste("R squared=", round(tmp$r.squared, 4)))
+```
+# task 8
+Install packages
+```{r}
+
+```
+
+##Note: I think everything is in the correct directory but every time I tried to open a csv file with my function, I got "Error in file(file, "rt") : cannot open the connection". 
+
